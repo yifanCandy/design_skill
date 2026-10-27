@@ -1,0 +1,173 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ツール仕様書 content contract",
+  "description": "Chapters 1-4 are structurally identical to 基本設計's ch1-4 (same fixed subsection labels), but ch3/ch4 chapter titles here are fixed ('ツール要件'/'ツール機能') rather than author-supplied. Chapters 5-6 have screenshot placeholders (not renderable) plus tractable tables. Ch7 mirrors 基本設計's ch5. Ch8/9 are new.",
+  "type": "object",
+  "required": ["meta", "ch1_definition", "ch2_overview", "ch3_requirements", "ch4_functions", "ch5_usage_image", "ch6_screen_definition", "ch7_details", "ch8_preferences", "ch9_error_messages"],
+  "additionalProperties": false,
+  "definitions": {
+    "paragraphBlock": {
+      "type": "object",
+      "required": ["title", "body"],
+      "additionalProperties": false,
+      "properties": {"title": {"type": "string"}, "body": {"type": "array", "items": {"type": "string"}, "minItems": 1}}
+    },
+    "listSection": {
+      "type": "object",
+      "required": ["type", "title", "items"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {"const": "list"}, "title": {"type": "string"},
+        "intro": {"type": "array", "items": {"type": "string"}},
+        "items": {"type": "array", "minItems": 1, "items": {"$ref": "#/definitions/paragraphBlock"}}
+      }
+    },
+    "table2colSection": {
+      "type": "object",
+      "required": ["type", "title", "col_headers", "rows"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {"const": "table2col"}, "title": {"type": "string"},
+        "intro": {"type": "array", "items": {"type": "string"}},
+        "col_headers": {"type": "array", "items": {"type": "string"}, "minItems": 2, "maxItems": 2},
+        "rows": {"type": "array", "minItems": 1, "items": {"type": "array", "items": {"type": "string"}, "minItems": 2, "maxItems": 2}}
+      }
+    }
+  },
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["system_name", "function_name", "author", "created_date", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "system_name": {"type": "string"},
+        "function_name": {"type": "string"},
+        "author": {"type": "string"},
+        "created_date": {"type": "string"},
+        "version": {"type": "string", "default": "1.0"}
+      }
+    },
+    "ch1_definition": {
+      "type": "object",
+      "required": ["references", "purpose", "problems", "usage_purposes"],
+      "additionalProperties": false,
+      "properties": {
+        "references": {"type": "array", "items": {"type": "string"}},
+        "purpose": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "problems": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "usage_purposes": {"type": "array", "minItems": 1, "items": {"$ref": "#/definitions/paragraphBlock"}}
+      }
+    },
+    "ch2_overview": {
+      "type": "object",
+      "required": ["overview", "use_cases", "process_overview"],
+      "additionalProperties": false,
+      "properties": {
+        "overview": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "use_cases": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "process_overview": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+      }
+    },
+    "ch3_requirements": {
+      "type": "object",
+      "required": ["functional", "performance", "availability", "operational", "security", "maintainability"],
+      "additionalProperties": false,
+      "description": "chapter_titleは無い。'ツール要件'固定",
+      "properties": {
+        "functional": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "performance": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "availability": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "operational": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "security": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "maintainability": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+      }
+    },
+    "ch4_functions": {
+      "type": "object",
+      "required": ["items"],
+      "additionalProperties": false,
+      "description": "chapter_titleは無い。'ツール機能'固定",
+      "properties": {"items": {"type": "array", "minItems": 1, "items": {"$ref": "#/definitions/paragraphBlock"}}}
+    },
+    "ch5_usage_image": {
+      "type": "object",
+      "required": ["intro", "steps"],
+      "additionalProperties": false,
+      "description": "実物は注釈付きスクリーンショットだが図は生成できないため、各ステップにplaceholder_noteを添えるのみ",
+      "properties": {
+        "intro": {"type": "array", "items": {"type": "string"}},
+        "steps": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["title", "body", "screenshot_note"],
+            "additionalProperties": false,
+            "properties": {
+              "title": {"type": "string"},
+              "body": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+              "screenshot_note": {"type": "string", "description": "この手順で本来貼るスクリーンショットの内容を一文で説明"}
+            }
+          }
+        }
+      }
+    },
+    "ch6_screen_definition": {
+      "type": "object",
+      "required": ["intro", "screens"],
+      "additionalProperties": false,
+      "properties": {
+        "intro": {"type": "array", "items": {"type": "string"}},
+        "screens": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "screenshot_note", "screen_control", "items_headers", "items_rows"],
+            "additionalProperties": false,
+            "properties": {
+              "name": {"type": "string", "description": "画面名。例:「ログイン画面」"},
+              "screenshot_note": {"type": "string"},
+              "screen_control": {"type": "array", "items": {"type": "array", "items": {"type": "string"}, "minItems": 2, "maxItems": 2}, "description": "属性/値の2列。例: [['モーダル','最大化不可']]"},
+              "items_headers": {"type": "array", "items": {"type": "string"}, "minItems": 3, "description": "例: ['No','日本語名','タイプ','読取','必須','桁数','初期値','備考']"},
+              "items_rows": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}}
+            }
+          }
+        }
+      }
+    },
+    "ch7_details": {
+      "type": "array", "minItems": 1,
+      "items": {"oneOf": [{"$ref": "#/definitions/listSection"}, {"$ref": "#/definitions/table2colSection"}]}
+    },
+    "ch8_preferences": {
+      "type": "object",
+      "required": ["intro", "headers", "rows"],
+      "additionalProperties": false,
+      "properties": {
+        "intro": {"type": "array", "items": {"type": "string"}},
+        "headers": {"type": "array", "items": {"type": "string"}, "minItems": 3, "maxItems": 3, "description": "例: ['キー','説明','デフォルト値']"},
+        "rows": {"type": "array", "items": {"type": "array", "items": {"type": "string"}, "minItems": 3, "maxItems": 3}}
+      }
+    },
+    "ch9_error_messages": {
+      "type": "object",
+      "required": ["sections"],
+      "additionalProperties": false,
+      "properties": {
+        "sections": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["title", "has_messages"],
+            "additionalProperties": false,
+            "properties": {
+              "title": {"type": "string"},
+              "has_messages": {"type": "boolean", "description": "falseなら'※なし'の1行だけ描画"},
+              "headers": {"type": "array", "items": {"type": "string"}, "minItems": 3, "maxItems": 3},
+              "rows": {"type": "array", "items": {"type": "array", "items": {"type": "string"}, "minItems": 3, "maxItems": 3}}
+            }
+          }
+        }
+      }
+    }
+  }
+}

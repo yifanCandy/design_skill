@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "基本設計書 content contract",
+  "description": "content.json must match this shape exactly. No extra top-level keys (a top-level _notes_for_review is stripped by generate.py before validation).",
+  "type": "object",
+  "required": ["meta", "ch1_definition", "ch2_overview", "ch3_requirements", "ch4_functions", "ch5_details", "ch6_spec"],
+  "additionalProperties": false,
+  "definitions": {
+    "paragraphBlock": {
+      "type": "object",
+      "required": ["title", "body"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {"type": "string", "description": "サブ項目の見出し（・を付けない）"},
+        "body": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "見出しの下に続く説明文。1要素=1行として描画される"}
+      }
+    },
+    "listSection": {
+      "type": "object",
+      "required": ["type", "title", "items"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {"const": "list"},
+        "title": {"type": "string"},
+        "intro": {"type": "array", "items": {"type": "string"}},
+        "items": {"type": "array", "minItems": 1, "items": {"$ref": "#/definitions/paragraphBlock"}}
+      }
+    },
+    "table2colSection": {
+      "type": "object",
+      "required": ["type", "title", "col_headers", "rows"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {"const": "table2col"},
+        "title": {"type": "string"},
+        "intro": {"type": "array", "items": {"type": "string"}},
+        "col_headers": {"type": "array", "items": {"type": "string"}, "minItems": 2, "maxItems": 2},
+        "rows": {"type": "array", "minItems": 1, "items": {"type": "array", "items": {"type": "string"}, "minItems": 2, "maxItems": 2}}
+      }
+    }
+  },
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["system_name", "function_name", "author", "created_date", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "system_name": {"type": "string"},
+        "function_name": {"type": "string", "description": "機能名。目次シート名やファイル名の既定値に使われる"},
+        "author": {"type": "string"},
+        "created_date": {"type": "string", "description": "YYYY-MM-DD"},
+        "version": {"type": "string", "default": "1.0"}
+      }
+    },
+    "ch1_definition": {
+      "type": "object",
+      "required": ["references", "purpose", "problems", "usage_purposes"],
+      "additionalProperties": false,
+      "properties": {
+        "references": {"type": "array", "items": {"type": "string"}, "description": "1.1 参照資料。無ければ空配列"},
+        "purpose": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "1.2 本書の目的"},
+        "problems": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "1.3 ログ設計...により解決する課題（相当）"},
+        "usage_purposes": {"type": "array", "minItems": 1, "items": {"$ref": "#/definitions/paragraphBlock"}, "description": "1.4 利用目的。例: 障害調査/運用/監査 のような分類"}
+      }
+    },
+    "ch2_overview": {
+      "type": "object",
+      "required": ["overview", "use_cases", "process_overview"],
+      "additionalProperties": false,
+      "properties": {
+        "overview": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "use_cases": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "各要素が1つのユースケース文（・は描画時に自動付与）"},
+        "process_overview": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+      }
+    },
+    "ch3_requirements": {
+      "type": "object",
+      "required": ["chapter_title", "functional", "performance", "availability", "operational", "security", "maintainability"],
+      "additionalProperties": false,
+      "description": "各カテゴリは段落配列。ユーザーが特記事項なしと答えた場合は 業界標準の定型文で埋めてよい",
+      "properties": {
+        "chapter_title": {"type": "string", "description": "3章の見出し。例: 'ログ出力機構要件'。機能名に応じて'<機能>要件'のように命名する"},
+        "functional": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "performance": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "availability": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "operational": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "security": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "maintainability": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+      }
+    },
+    "ch4_functions": {
+      "type": "object",
+      "required": ["chapter_title", "items"],
+      "additionalProperties": false,
+      "description": "4章。件数は可変（テンプレのように7件固定である必要はない）",
+      "properties": {
+        "chapter_title": {"type": "string", "description": "4章の見出し。例: 'ログ出力機構の機能'"},
+        "items": {"type": "array", "minItems": 1, "items": {"$ref": "#/definitions/paragraphBlock"}}
+      }
+    },
+    "ch5_details": {
+      "type": "array",
+      "minItems": 1,
+      "description": "5章の各節。list（種別/タイミング列挙など）と table2col（レベル定義や項目定義のような2列表）を混在できる。件数・種類は機能に応じて自由に設計する",
+      "items": {
+        "oneOf": [
+          {"$ref": "#/definitions/listSection"},
+          {"$ref": "#/definitions/table2colSection"}
+        ]
+      }
+    },
+    "ch6_spec": {
+      "type": "object",
+      "required": ["title", "format_section", "items_table", "examples", "notes"],
+      "additionalProperties": false,
+      "description": "6章はその機能固有の仕様章。シート名・目次見出しは '6.' + title になる",
+      "properties": {
+        "title": {"type": "string", "description": "例: 'ログ仕様' / '権限仕様' など、機能に応じた章タイトル"},
+        "format_section": {
+          "type": "object",
+          "required": ["intro", "format_string"],
+          "additionalProperties": false,
+          "properties": {
+            "intro": {"type": "array", "items": {"type": "string"}},
+            "format_string": {"type": "string", "description": "出力フォーマットや構造の定義。1行のコード的表現"}
+          }
+        },
+        "items_table": {
+          "type": "object",
+          "required": ["headers", "rows"],
+          "additionalProperties": false,
+          "properties": {
+            "headers": {"type": "array", "items": {"type": "string"}, "minItems": 3, "maxItems": 3, "description": "例: ['No','項目','内容']"},
+            "rows": {"type": "array", "minItems": 1, "items": {"type": "array", "items": {"type": "string"}, "minItems": 3, "maxItems": 3}}
+          }
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "text"],
+            "additionalProperties": false,
+            "properties": {"label": {"type": "string"}, "text": {"type": "string"}}
+          }
+        },
+        "notes": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}

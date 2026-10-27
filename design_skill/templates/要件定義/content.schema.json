@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "要件定義書 content contract",
+  "description": "content.json must match this shape exactly. No extra top-level keys (a top-level _notes_for_review is stripped by generate.py before validation). Chapters 1/2/4/5/6 use a fixed generic skeleton (same subsection labels for any project); chapter 3's table and chapter 5's diagram description are the only fully free-form parts.",
+  "type": "object",
+  "required": ["meta", "ch1_definition", "ch2_overview", "ch3_requirements_list", "ch4_nonfunctional", "ch5_usage_image", "ch6_schedule"],
+  "additionalProperties": false,
+  "definitions": {
+    "paragraphBlock": {
+      "type": "object",
+      "required": ["title", "body"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {"type": "string"},
+        "body": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+      }
+    }
+  },
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["system_name", "function_name", "author", "created_date", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "system_name": {"type": "string"},
+        "function_name": {"type": "string", "description": "本要件定義が対象とするプロジェクト・機能・案件の名称"},
+        "author": {"type": "string"},
+        "created_date": {"type": "string", "description": "YYYY-MM-DD"},
+        "version": {"type": "string", "default": "1.0"}
+      }
+    },
+    "ch1_definition": {
+      "type": "object",
+      "required": ["references", "purpose", "current_problems", "glossary"],
+      "additionalProperties": false,
+      "properties": {
+        "references": {"type": "array", "items": {"type": "string"}, "description": "1.1 参照資料。無ければ空配列"},
+        "purpose": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "1.2 本書の目的"},
+        "current_problems": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "1.3 現状の課題"},
+        "glossary": {"type": "array", "items": {"$ref": "#/definitions/paragraphBlock"}, "description": "1.4 用語定義。titleが用語、bodyが説明。無ければ空配列でも可"}
+      }
+    },
+    "ch2_overview": {
+      "type": "object",
+      "required": ["background", "scope", "stakeholders"],
+      "additionalProperties": false,
+      "properties": {
+        "background": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "2.1 背景・目的"},
+        "scope": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "2.2 対象範囲。対象/対象外を1行ずつの箇条書きで列挙"},
+        "stakeholders": {"type": "array", "minItems": 1, "items": {"$ref": "#/definitions/paragraphBlock"}, "description": "2.3 ステークホルダ。titleが役割名、bodyが役割の説明"}
+      }
+    },
+    "ch3_requirements_list": {
+      "type": "object",
+      "required": ["chapter_title", "intro", "headers", "rows"],
+      "additionalProperties": false,
+      "description": "本書の中核となる要件一覧表。件数・列数は案件次第で自由",
+      "properties": {
+        "chapter_title": {"type": "string", "description": "例:「機能要件一覧」"},
+        "intro": {"type": "array", "items": {"type": "string"}},
+        "headers": {"type": "array", "items": {"type": "string"}, "minItems": 3, "description": "例: ['No','要件ID','要件名','概要','優先度']"},
+        "rows": {"type": "array", "minItems": 1, "items": {"type": "array", "items": {"type": "string"}}}
+      }
+    },
+    "ch4_nonfunctional": {
+      "type": "object",
+      "required": ["chapter_title", "functional", "performance", "availability", "operational", "security", "maintainability"],
+      "additionalProperties": false,
+      "description": "非機能要件。特記事項がなければ標準的な定型文でよい",
+      "properties": {
+        "chapter_title": {"type": "string", "description": "例:「非機能要件」"},
+        "functional": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "performance": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "availability": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "operational": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "security": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "maintainability": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+      }
+    },
+    "ch5_usage_image": {
+      "type": "object",
+      "required": ["intro", "diagram_placeholder", "use_case_steps"],
+      "additionalProperties": false,
+      "description": "5.1は業務フロー図/画面イメージ図の説明（図そのものはレンダリングできないため注記のみ）、5.2は利用シーンをステップで示す",
+      "properties": {
+        "intro": {"type": "array", "items": {"type": "string"}},
+        "diagram_placeholder": {"type": "string", "description": "本来ここに入る図の内容を一文で説明する（例:「利用者が申請〜承認までの業務フロー図」）。図そのものは別途手動で貼付する前提"},
+        "use_case_steps": {"type": "array", "minItems": 1, "items": {"$ref": "#/definitions/paragraphBlock"}}
+      }
+    },
+    "ch6_schedule": {
+      "type": "object",
+      "required": ["chapter_title", "intro", "headers", "rows"],
+      "additionalProperties": false,
+      "properties": {
+        "chapter_title": {"type": "string", "description": "例:「スケジュール」"},
+        "intro": {"type": "array", "items": {"type": "string"}},
+        "headers": {"type": "array", "items": {"type": "string"}, "minItems": 3, "maxItems": 3, "description": "例: ['フェーズ','期間','内容']"},
+        "rows": {"type": "array", "minItems": 1, "items": {"type": "array", "items": {"type": "string"}, "minItems": 3, "maxItems": 3}}
+      }
+    }
+  }
+}
