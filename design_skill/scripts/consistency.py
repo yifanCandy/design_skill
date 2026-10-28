@@ -7,9 +7,12 @@ required ones are mentioned. This module compares the *content* that must be car
     基本設計書 F      本文の REQ はこの F の REQ だけ
     詳細仕様書 F      4章のサブ機能構成 = 同じ F の基本設計書4章
                       6章の画面 = この F を含む SCR（「SCR-xx <画面名>」）、項目表に 日本語名/必須/桁数 列
+                      桁数のある入力項目は、超過時の扱い（maxlength で入力制限 / MSG-xxx で画面チェック）を備考に書く
                       同じ画面の項目の 必須・桁数 が、作成済みの他の F の詳細仕様書と一致
                       9章のメッセージ = この F の MSG、区分・文言が主表どおり
     詳細設計書 SCR    IF定義書のシナリオ = この画面の IF、process_name・通信方式・URL が主表どおり
+                      エラーレスポンス表: 各行の messageId が主表の MSG、認証が必要な IF（auth）は 401 行がある、
+                      リクエストのパラメタ（キー）がすべて、いずれかの行の発生条件に書かれている
                       メッセージID一覧 = この画面の機能の MSG、「ツール仕様書のエラーID」が同じ MSG
                       入力チェック表（項目名/必須/桁数）の各項目が詳細仕様書6章と一致し、必須項目が全部ある
 
@@ -26,6 +29,8 @@ SPEC_ITEM_HEADERS = ["日本語名", "必須", "桁数"]
 SPEC_MSG_HEADERS = ["メッセージID", "区分", "メッセージ"]
 DESIGN_MSG_HEADERS = ["メッセージID", "ツール仕様書のエラーID"]
 DESIGN_CHECK_HEADERS = ["項目名", "必須", "桁数"]
+ERROR_HEADERS = ["HTTPステータス", "messageId", "発生条件"]
+INPUT_TYPES = ("テキスト", "パスワード", "テキストエリア", "数値", "メール")
 
 YES = {"○", "◯", "〇", "●", "必須", "y", "yes", "true", "要"}
 ID_IN = {
@@ -146,6 +151,8 @@ def check_spec(master, sys_dir, target, content):
         lost = missing_headers(scr["items_headers"], SPEC_ITEM_HEADERS)
         if lost:
             errors.append(f"6章「{scr['name']}」の項目定義表に列 {lost} が無い")
+            continue
+        errors += check_overflow(scr)
 
     for s in screens:  # the same screen in other functions' specs must define the same items the same way
         mine = spec_screen_items(content, s["id"])
@@ -181,6 +188,56 @@ def check_spec(master, sys_dir, target, content):
     return errors
 
 
+def check_overflow(scr):
+    """桁数のある入力項目は、超過時の扱いを備考に書く（実装者が maxlength とメッセージのどちらにするか迷わないように）。"""
+    h = scr["items_headers"]
+    i_name, i_type, i_len, i_note = col(h, "日本語名"), col(h, "タイプ"), col(h, "桁数"), col(h, "備考")
+    errors = []
+    for r in scr["items_rows"]:
+        if i_type is None or not any(t in norm(cell(r, i_type)) for t in INPUT_TYPES):
+            continue
+        if not re.fullmatch(r"\d+", length(cell(r, i_len))):
+            continue
+        note = norm(cell(r, i_note))
+        if "maxlength" not in note.lower() and not ID_IN["MSG"].search(note):
+            errors.append(f"6章「{scr['name']}」の項目「{cell(r, i_name)}」（桁数 {cell(r, i_len)}）の備考に、桁数超過時の扱いが無い"
+                          "（「maxlength で入力を制限」か「超過時は MSG-xxx」のどちらかを書く）")
+    return errors
+
+
+def check_error_responses(scenario, interface, msgs):
+    """IF定義書のエラーレスポンス表: messageId は主表の MSG、認証が必要な IF は 401 行、各リクエスト項目の不正時の扱いがある。"""
+    iid = interface["id"]
+    tables = [t for t in scenario.get("response_tables") or [] if "エラー" in t["label"]]
+    if not tables:
+        return [f"{iid} のエラーレスポンス表が無い（列 {ERROR_HEADERS}）"]
+    errors, statuses, conditions = [], set(), ""
+    for t in tables:
+        lost = missing_headers(t["headers"], ERROR_HEADERS)
+        if lost:
+            errors.append(f"{iid} のエラーレスポンス表に列 {lost} が無い")
+            continue
+        i_st, i_id, i_cond = (col(t["headers"], n) for n in ERROR_HEADERS)
+        for row in t["rows"]:
+            statuses.add(norm(cell(row, i_st)))
+            conditions += norm(cell(row, i_cond)) + "|"
+            if not ID_IN["MSG"].fullmatch(norm(cell(row, i_id))) or norm(cell(row, i_id)) not in msgs:
+                errors.append(f"{iid} のエラーレスポンス「{cell(row, i_cond)}」の messageId「{cell(row, i_id)}」が主表の MSG ではない"
+                              "（画面に返すエラーには必ず主表のメッセージを割り当てる。無ければ主表に追加する）")
+    if interface.get("auth") and "401" not in statuses:
+        errors.append(f"{iid} は認証が必要（主表 auth=true）なのに、エラーレスポンス表に 401（未ログイン・セッション無効）の行が無い")
+    for t in scenario.get("request_tables") or []:
+        if "パラメタ" not in t["label"]:
+            continue
+        i_key = col(t["headers"], "キー")
+        for row in t["rows"]:
+            key = norm(cell(row, i_key))
+            if key and key not in conditions:
+                errors.append(f"{iid} のリクエスト項目「{cell(row, i_key)}」が不正な場合（未指定・型不正・桁数超過・選択肢外・存在しない等）の"
+                              "応答が、エラーレスポンス表の発生条件に書かれていない（発生条件に項目名を含めて書く）")
+    return errors
+
+
 def fmt(item):
     return f"必須={'○' if item[0] else '-'}, 桁数={item[1]}"
 
@@ -208,6 +265,7 @@ def check_design(master, sys_dir, target, content):
             errors.append(f"{i['id']} の通信方式「{sc['communication']['type']}」が主表「{i['method']}」と違う")
         if norm(sc["communication"]["url"]) != norm(i["path"]):
             errors.append(f"{i['id']} の URL「{sc['communication']['url']}」が主表「{i['path']}」と違う")
+        errors += check_error_responses(sc, i, {m["id"] for m in master["messages"]})
     errors += set_diff("IF定義書のシナリオ", found, {i["id"] for i in master["interfaces"] if i["screen"] == target})
 
     ml = content["detailed_design"]["message_list"]

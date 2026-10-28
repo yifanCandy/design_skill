@@ -129,6 +129,11 @@ def check_master(master):
             for r in t["functions"]:
                 expect(t["id"], r, "F-")
 
+    for d in master["initial_data"]:
+        expect("initial_data", d["table"], "TBL-")
+    if any(i["auth"] for i in master["interfaces"]) and not master["initial_data"]:
+        errors.append("initial_data: 認証が必要な IF があるのに、ログインに使う初期ユーザーが定義されていない")
+
     covered = {r for f in master["functions"] for r in f["requirements"]}
     for req in master["requirements"]:
         if req["id"] not in covered:
