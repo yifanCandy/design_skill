@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "テスト結果報告書 content (code-generation skill)",
+  "description": "テストケース台帳。結果（OK/NG/未実施）はここには書かず、project.junit_xml の実行結果から generate.py が読み取る。",
+  "type": "object",
+  "required": ["meta", "project", "review", "cases", "untested"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["system_name", "function_name", "author", "created_date", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "system_name": {"type": "string"},
+        "function_name": {"type": "string", "description": "システム名（要件定義書と同じ）"},
+        "author": {"type": "string"},
+        "created_date": {"type": "string", "description": "YYYY-MM-DD"},
+        "version": {"type": "string", "default": "1.0"}
+      }
+    },
+    "project": {
+      "type": "object",
+      "required": ["dir", "tech_stack", "test_framework", "test_command", "junit_xml", "start_command"],
+      "additionalProperties": false,
+      "properties": {
+        "dir": {"type": "string", "description": "生成したコードのディレクトリ（絶対パス。<プロジェクト>/<システム名>/07ソースコード_<日時>）"},
+        "tech_stack": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "言語・フレームワーク・DB とバージョン"},
+        "test_framework": {"type": "string", "description": "例: Vitest 2.1 + supertest"},
+        "test_command": {"type": "string", "description": "全テストを実行して JUnit XML を出力するコマンド（dir で実行）"},
+        "junit_xml": {"type": "string", "description": "test_command が出力する JUnit XML のパス（dir からの相対パス）"},
+        "start_command": {"type": "string", "description": "アプリを起動するコマンド（dir で実行。例: npm run dev -- -p 3000）"},
+        "url": {"type": "string", "description": "起動したアプリのアクセス URL（例: http://localhost:3000）"}
+      }
+    },
+    "review": {
+      "type": "array",
+      "description": "詳細仕様書・詳細設計書のレビュー結果。指摘が無くても、確認した観点を1件以上書く。",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["document", "finding", "severity", "action"],
+        "additionalProperties": false,
+        "properties": {
+          "document": {"type": "string", "description": "例: 詳細仕様書 F-05 / 詳細設計書 SCR-03"},
+          "finding": {"type": "string"},
+          "severity": {"enum": ["重大", "軽微", "確認のみ"]},
+          "action": {"type": "string", "description": "実装でどう扱ったか（文書修正を依頼した、など）"}
+        }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "function", "targets", "category", "viewpoint", "precondition", "steps", "expected"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "pattern": "^TC-\\d{2}-\\d{3}$", "description": "TC-<F番号2桁>-<連番3桁>。テストコードのテスト名にも同じ ID を含める"},
+          "function": {"type": "string", "pattern": "^F-\\d{2}$"},
+          "targets": {"type": "array", "items": {"type": "string", "pattern": "^(SCR-\\d{2}|IF-\\d{2}|TBL-\\d{2}|MSG-\\d{3})$"}, "minItems": 1, "description": "このケースで検証する画面・IF・テーブル・メッセージ"},
+          "category": {"enum": ["正常系", "異常系", "境界値"]},
+          "viewpoint": {"type": "string", "description": "テスト観点（1文）"},
+          "precondition": {"type": "array", "items": {"type": "string"}},
+          "steps": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "expected": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "設計書から導いた期待結果（実装の挙動に合わせて書かない）"}
+        }
+      }
+    },
+    "untested": {
+      "type": "array",
+      "description": "どのケースの targets にも入らない IF・MSG と、その理由。無ければ空配列。",
+      "items": {
+        "type": "object",
+        "required": ["id", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "pattern": "^(IF-\\d{2}|MSG-\\d{3})$"},
+          "reason": {"type": "string"}
+        }
+      }
+    }
+  }
+}

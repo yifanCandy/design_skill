@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "詳細設計 (IF定義書 + 詳細設計書本体) content contract",
+  "description": "One 詳細設計 deliverable covers one screen/function and produces TWO xlsx files from this single JSON: an IF定義書 (if_definition) and a 詳細設計書本体 (detailed_design). シーケンス図 (Astah UML) is explicitly out of scope — not modeled here, drawn manually.",
+  "type": "object",
+  "required": ["meta", "if_definition", "detailed_design"],
+  "additionalProperties": false,
+  "definitions": {
+    "labeledTable": {
+      "type": "object",
+      "required": ["label", "headers", "rows"],
+      "additionalProperties": false,
+      "properties": {
+        "label": {"type": "string", "description": "○見出し。例: 'ヘッダ情報' 'パラメタ' 'JSON形式'"},
+        "headers": {"type": "array", "items": {"type": "string"}, "minItems": 2},
+        "rows": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}}
+      }
+    },
+    "stepPart": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {"enum": ["text", "table"]},
+        "lines": {"type": "array", "items": {"type": "string"}, "description": "type=text のとき使用"},
+        "headers": {"type": "array", "items": {"type": "string"}, "description": "type=table のとき使用"},
+        "rows": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}, "description": "type=table のとき使用"}
+      }
+    },
+    "step": {
+      "type": "object",
+      "required": ["marker", "title", "parts"],
+      "additionalProperties": false,
+      "properties": {
+        "marker": {"type": "string", "description": "①②③...の丸数字、通し番号"},
+        "title": {"type": "string"},
+        "parts": {"type": "array", "minItems": 1, "items": {"$ref": "#/definitions/stepPart"}}
+      }
+    }
+  },
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["system_name", "function_name", "author", "created_date", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "system_name": {"type": "string"},
+        "function_name": {"type": "string", "description": "例: 'W001_ログイン認証'（画面ID_画面名）"},
+        "author": {"type": "string"},
+        "created_date": {"type": "string"},
+        "version": {"type": "string", "default": "1.0"}
+      }
+    },
+    "if_definition": {
+      "type": "object",
+      "required": ["scenarios"],
+      "additionalProperties": false,
+      "description": "画面/エンドポイントが持つシナリオ単位でシートを分ける（例: ログイン / ログイン失敗）。目次は作らない",
+      "properties": {
+        "scenarios": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "process_name", "communication", "request_tables", "response_success", "response_tables"],
+            "additionalProperties": false,
+            "properties": {
+              "name": {"type": "string", "description": "シートタブ名になる"},
+              "process_name": {"type": "string"},
+              "communication": {
+                "type": "object",
+                "required": ["type", "url"],
+                "additionalProperties": false,
+                "properties": {"type": {"type": "string"}, "url": {"type": "string"}}
+              },
+              "request_tables": {"type": "array", "items": {"$ref": "#/definitions/labeledTable"}},
+              "response_success": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+              "response_tables": {"type": "array", "items": {"$ref": "#/definitions/labeledTable"}}
+            }
+          }
+        }
+      }
+    },
+    "detailed_design": {
+      "type": "object",
+      "required": ["functions", "message_list"],
+      "additionalProperties": false,
+      "description": "画面/機能が持つサブ機能ごとに1シート、各シートはステップ(①②③...)の並び。最後に固定の3.メッセージID一覧シートが付く",
+      "properties": {
+        "functions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "steps"],
+            "additionalProperties": false,
+            "properties": {
+              "name": {"type": "string", "description": "シートタブ名。例: '1-1.ログイン'"},
+              "steps": {"type": "array", "minItems": 1, "items": {"$ref": "#/definitions/step"}}
+            }
+          }
+        },
+        "message_list": {
+          "type": "object",
+          "required": ["headers", "rows"],
+          "additionalProperties": false,
+          "description": "3.メッセージID一覧。例の列: ['#','定義場所','メッセージID','ツール仕様書のエラーID','備考']",
+          "properties": {
+            "headers": {"type": "array", "items": {"type": "string"}, "minItems": 3},
+            "rows": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}}
+          }
+        }
+      }
+    }
+  }
+}
